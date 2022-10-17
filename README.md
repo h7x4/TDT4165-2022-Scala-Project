@@ -2,25 +2,20 @@
 
 ## Delivery 1
 
-In order to run this part of the project, you will only need to use the scala REPL.
-
-It gets installed with the language, which you can find [here][scala].
+To run a part of either task 1 or task 2, use the following commands.
 
 ```console
 $ cd tasks
-$ scala task1.scala
-$ scala task2.scala
+$ sbt run
 ```
+
+You will then be asked to choose which main method you want to run.
 
 ## Delivery 2
 
-In order to run this part of the project, you will need the scala build tool (sbt).
-
-It gets installed with the language, which you can find [here][scala].
+To run the project, use the following commands
 
 ```console
 $ cd project_tasks
 $ sbt run
 ```
-
-[scala]: https://www.scala-lang.org/download/
