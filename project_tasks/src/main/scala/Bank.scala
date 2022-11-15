@@ -2,8 +2,14 @@ class Bank(val allowedAttempts: Integer = 3) {
 
     private val transactionsQueue: TransactionQueue = new TransactionQueue()
     private val processedTransactions: TransactionQueue = new TransactionQueue()
+    private var processingThreadsStarted = false;
+    private val processingThreads: List[Thread] =
+      (1 to 1).map(_ => new Thread {
+        override def run = processTransactions
+      }).toList
 
     def addTransactionToQueue(from: Account, to: Account, amount: Double): Unit = {
+      printf("[%s]: Added transaction to queue\n", Thread.currentThread().toString())
       transactionsQueue.push(new Transaction(
         transactionsQueue,
         processedTransactions,
@@ -13,36 +19,45 @@ class Bank(val allowedAttempts: Integer = 3) {
         10,
       ))
 
-      Main.thread(processTransaction(transactionsQueue.pop()))
-    }
-                                                // TODO
-                                                // project task 2
-                                                // create a new transaction object and put it in the queue
-                                                // spawn a thread that calls processTransactions
-
-    // There are mixed instructions for this method.
-    // It's called `processTransactions`, indicating that it should
-    // process all lists, the part in the assigment pdf indicates this as well.
-    // However the comment below is written as if there is only one transaction to
-    // be processed, and the fact that `addTransactionToQueue` calls this method every
-    // time something is added, supports that theory as well.
-    // We just went with the most logical option...
-    private def processTransactions(trx: Transaction): Unit = {
-      // thread = Main.thread(trx)
-      // thread.join()
-      trx()
-      if (trx.status == TransactionStatus.PENDING && trx.attempt < trx.allowedAttemps) {
-        processTransactions(trx)
-      } else {
-        processedTransactions.push(trx);
+      if (!processingThreadsStarted) {
+        processingThreads.foreach(t => {
+          t.start
+          print("Starting processing thread\n")
+        })
+        processingThreadsStarted = true;
       }
     }
-                                                // TODO
-                                                // project task 2
-                                                // Function that pops a transaction from the queue
-                                                // and spawns a thread to execute the transaction.
-                                                // Finally do the appropriate thing, depending on whether
-                                                // the transaction succeeded or not
+    // TODO
+    // project task 2
+    // create a new transaction object and put it in the queue
+    // spawn a thread that calls processTransactions
+
+    // This function is a worker that continuously
+    // pops elements from the queue and processes them.
+    // Multiple of these can be run on separate threads.
+    private def processTransactions: Unit = {
+      if (transactionsQueue.isEmpty) {
+        Thread.sleep(50)
+      } else {
+        val trx = transactionsQueue.pop
+
+        Main.thread(trx.run).join()
+
+        if (trx.status == TransactionStatus.PENDING) {
+          transactionsQueue.push(trx);
+        } else {
+          processedTransactions.push(trx);
+        }
+      }
+
+      processTransactions
+    }
+    // TODO
+    // project task 2
+    // Function that pops a transaction from the queue
+    // and spawns a thread to execute the transaction.
+    // Finally do the appropriate thing, depending on whether
+    // the transaction succeeded or not
 
     def addAccount(initialBalance: Double): Account = {
         new Account(this, initialBalance)

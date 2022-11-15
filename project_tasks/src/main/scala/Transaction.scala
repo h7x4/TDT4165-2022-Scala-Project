@@ -16,16 +16,16 @@ class TransactionQueue {
     def pop: Transaction = {queue.synchronized(queue.dequeue())}
 
     // Return whether the queue is empty
-    def isEmpty: Boolean = {queue.synchronized(queue.isEmpty())}
+    def isEmpty: Boolean = {queue.synchronized(queue.isEmpty)}
 
     // Add new element to the back of the queue
-    def push(t: Transaction): Unit = {queue.synchronized(queue.push(t))}
+    def push(t: Transaction): Unit = {queue.synchronized(queue.enqueue(t))}
 
     // Return the first element from the queue without removing it
-    def peek: Transaction = {queue.synchronized(queue.front())}
+    def peek: Transaction = {queue.synchronized(queue.front)}
 
     // Return an iterator to allow you to iterate over the queue
-    def iterator: Iterator[Transaction] = {queue.synchronized(queue.iterator())}
+    def iterator: Iterator[Transaction] = {queue.synchronized(queue.iterator)}
 }
 
 class Transaction(val transactionsQueue: TransactionQueue,
@@ -39,22 +39,31 @@ class Transaction(val transactionsQueue: TransactionQueue,
   var attempt = 0
 
   override def run: Unit = {
-
-      def doTransaction() = {
-          // TODO - project task 3
-          // Extend this method to satisfy requirements.
-          from withdraw amount
-          to deposit amount
-      }
-
+    def doTransaction(): Unit = {
       // TODO - project task 3
-      // make the code below thread safe
-      if (status == TransactionStatus.PENDING) {
-          doTransaction
-          Thread.sleep(50) // you might want this to make more room for
-                           // new transactions to be added to the queue
+      // Extend this method to satisfy requirements.
+      if (from.withdraw(amount).isRight) {
+        return
       }
 
+      if (to.deposit(amount).isRight) {
+        if (from.deposit(amount).isRight) print("oof")
+        return
+      }
 
+      status = TransactionStatus.SUCCESS
     }
+
+    attempt += 1
+    if (status != TransactionStatus.PENDING) {
+      return
+    }
+    from.synchronized(to.synchronized(doTransaction))
+
+    Thread.sleep(50)
+
+    if (attempt >= allowedAttemps) {
+      status = TransactionStatus.FAILED
+    }
+  }
 }
