@@ -1,31 +1,37 @@
-class Bank(val allowedAttempts: Integer = 3) {
+class Bank(val allowedAttempts: Integer = 3, val workers: Integer = 5) {
 
     private val transactionsQueue: TransactionQueue = new TransactionQueue()
     private val processedTransactions: TransactionQueue = new TransactionQueue()
     private var processingThreadsStarted = false;
     private val processingThreads: List[Thread] =
-      (1 to 1).map(_ => new Thread {
+      (1 to workers).map(_ => new Thread {
         override def run = processTransactions
       }).toList
+    
+    private var addedTransactions = 0
 
     def addTransactionToQueue(from: Account, to: Account, amount: Double): Unit = {
-      printf("[%s]: Added transaction to queue\n", Thread.currentThread().toString())
       transactionsQueue.push(new Transaction(
         transactionsQueue,
         processedTransactions,
         from,
         to,
         amount,
-        10,
+        allowedAttempts,
       ))
 
-      if (!processingThreadsStarted) {
-        processingThreads.foreach(t => {
-          t.start
-          print("Starting processing thread\n")
-        })
-        processingThreadsStarted = true;
-      }
+      addedTransactions += 1
+
+      processingThreadsStarted.synchronized({
+        if (!processingThreadsStarted) {
+          processingThreads.foreach(t => {
+            t.start
+          })
+          processingThreadsStarted = true;
+        }
+      })
+
+      
     }
     // TODO
     // project task 2
@@ -36,18 +42,21 @@ class Bank(val allowedAttempts: Integer = 3) {
     // pops elements from the queue and processes them.
     // Multiple of these can be run on separate threads.
     private def processTransactions: Unit = {
-      if (transactionsQueue.isEmpty) {
-        Thread.sleep(50)
-      } else {
-        val trx = transactionsQueue.pop
+      val maybeTrx = transactionsQueue.synchronized(
+        if (transactionsQueue.isEmpty) None else Some(transactionsQueue.pop)
+      )
 
-        Main.thread(trx.run).join()
+      maybeTrx match {
+        case Some(trx) => {
+          Main.thread(trx.run).join()
 
-        if (trx.status == TransactionStatus.PENDING) {
-          transactionsQueue.push(trx);
-        } else {
-          processedTransactions.push(trx);
+          if (trx.status == TransactionStatus.PENDING) {
+            transactionsQueue.push(trx)
+          } else {
+            processedTransactions.push(trx)
+          }
         }
+        case None => Thread.sleep(50)
       }
 
       processTransactions

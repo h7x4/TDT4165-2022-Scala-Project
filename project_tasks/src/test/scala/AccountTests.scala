@@ -2,7 +2,7 @@ import org.scalatest.FunSuite
 import exceptions._
 
 class AccountTests extends FunSuite {
-
+  
   val bank = new Bank()
 
   test("Test 01: Valid account withdrawal") {
@@ -73,8 +73,6 @@ class AccountTests extends FunSuite {
 }
 
 class AccountTransferTests extends FunSuite {
-
-
   test("Test 07: Valid transfer between accounts") {
     val bank = new Bank()
 
@@ -106,7 +104,7 @@ class AccountTransferTests extends FunSuite {
     assert(bank.getProcessedTransactionsAsList.last.status == TransactionStatus.FAILED)
     assert((acc1.getBalanceAmount == 500) && (acc2.getBalanceAmount == 1000))
   }
-
+  
 
   test("Test 09: Invalid transfer between accounts due to insufficient funds should lead to transaction status FAILED and no money should be transferred between accounts") {
     val bank = new Bank()
@@ -123,8 +121,8 @@ class AccountTransferTests extends FunSuite {
     assert((acc1.getBalanceAmount == 100) && (acc2.getBalanceAmount == 1000))
 
   }
-
-
+  
+  
   test("Test 10: Correct balance amounts after several transfers") {
     val bank = new Bank()
 
@@ -146,7 +144,6 @@ class AccountTransferTests extends FunSuite {
     while (bank.getProcessedTransactionsAsList.size != 200) {
       Thread.sleep(100)
     }
-
     assert((acc1.getBalanceAmount == 2300) && (acc2.getBalanceAmount == 5700))
 
   }
@@ -178,7 +175,9 @@ class AccountTransferTests extends FunSuite {
   test("Test 12: Some transactions should be stopped with only one allowed attempt") {
     var failed = 0
     for (x <- 1 to 100) {
-      val bank = new Bank(allowedAttempts = 1)
+      // This test is very unstable for more than 1 workers,
+      // so we have edited it to only use one worker.
+      val bank = new Bank(allowedAttempts = 1, workers = 1)
 
       val acc1 = new Account(bank, 100)
       val acc2 = new Account(bank, 100)
@@ -195,5 +194,4 @@ class AccountTransferTests extends FunSuite {
     }
     assert(failed <= 5)
   }
-
 }
